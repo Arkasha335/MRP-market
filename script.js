@@ -1,186 +1,158 @@
-// Основной объект приложения
-const PriceTracker = {
-    // Текущий активный раздел
-    currentTab: 'skins',
-    
-    // Данные по разделам
-     {
-        skins: [],
-        accessories: [],
-        items: [],
-        cars: [],
-        houses: []
-    },
-    
-    // Инициализация приложения
+// Price Tracker — надёжная реализация
+class PriceTracker {
+    constructor() {
+        this.currentTab = 'skins';
+        this.data = {
+            skins: [],
+            accessories: [],
+            items: [],
+            cars: [],
+            houses: []
+        };
+        this.init();
+    }
+
     init() {
         this.loadFromStorage();
         this.bindEvents();
-        this.render();
-        this.updateEmptyState();
-    },
-    
-    // Привязка событий
+        this.renderTab('skins'); // Явная инициализация
+    }
+
     bindEvents() {
         // Переключение вкладок
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                this.switchTab(e.target.dataset.tab);
+                const tab = e.target.dataset.tab;
+                if (this.currentTab !== tab) {
+                    this.renderTab(tab);
+                }
             });
         });
-        
-        // Форма добавления товара
+
+        // Форма добавления
         document.getElementById('item-form').addEventListener('submit', (e) => {
             e.preventDefault();
             this.addItem();
         });
-        
-        // Поиск
-        document.getElementById('search-input').addEventListener('input', () => {
-            this.render();
+
+        // Проверка дубликатов в реальном времени
+        document.getElementById('item-name').addEventListener('input', () => {
+            this.updateDuplicateWarning();
         });
-        
-        // Сортировка
-        document.getElementById('sort-select').addEventListener('change', () => {
-            this.render();
-        });
-        
-        // Экспорт данных
-        document.getElementById('export-btn').addEventListener('click', () => {
-            this.exportData();
-        });
-        
-        // Закрытие модального окна
-        document.getElementById('close-modal').addEventListener('click', () => {
-            this.closeModal();
-        });
-        
-        // Сохранение изменений в модальном окне
-        document.getElementById('save-changes-btn').addEventListener('click', () => {
-            this.saveItemChanges();
-        });
-        
-        // Удаление товара в модальном окне
-        document.getElementById('delete-item-btn').addEventListener('click', () => {
-            this.deleteItem();
-        });
-        
-        // Добавление новой цены в модальном окне
-        document.getElementById('add-price-btn').addEventListener('click', () => {
-            this.addNewPriceToEdit();
-        });
-        
-        // Обработка чекбокса "цена за штуку" в форме добавления
-        document.getElementById('is-per-unit').addEventListener('change', () => {
-            document.getElementById('per-unit-fields').style.display = 
-                this.currentTab === 'items' && document.getElementById('is-per-unit').checked ? 'block' : 'none';
-            this.updateCalculatedPrice();
-        });
-        
-        // Обновление расчёта при изменении полей
+
+        // Поиск и сортировка
+        document.getElementById('search-input').addEventListener('input', () => this.renderItems());
+        document.getElementById('sort-select').addEventListener('change', () => this.renderItems());
+
+        // Экспорт
+        document.getElementById('export-btn').addEventListener('click', () => this.exportData());
+
+        // Модальное окно
+        document.getElementById('close-modal').addEventListener('click', () => this.closeModal());
+        document.getElementById('save-changes-btn').addEventListener('click', () => this.saveItemChanges());
+        document.getElementById('delete-item-btn').addEventListener('click', () => this.deleteItem());
+        document.getElementById('add-price-btn').addEventListener('click', () => this.addNewPriceToEdit());
+
+        // Управление полями "Вещи"
+        document.getElementById('is-per-unit').addEventListener('change', () => this.togglePerUnitFields());
         ['total-cost', 'quantity'].forEach(id => {
-            document.getElementById(id).addEventListener('input', () => {
-                this.updateCalculatedPrice();
-            });
+            document.getElementById(id).addEventListener('input', () => this.updateCalculatedPrice());
         });
-        
-        // Обработка чекбокса в модальном окне
-        document.getElementById('edit-is-per-unit').addEventListener('change', () => {
-            document.getElementById('edit-per-unit-fields').style.display = 
-                this.currentTab === 'items' && document.getElementById('edit-is-per-unit').checked ? 'block' : 'none';
-            this.updateEditCalculatedPrice();
-        });
-        
-        // Обновление расчёта в модальном окне
+
+        // В модальном окне
+        document.getElementById('edit-is-per-unit').addEventListener('change', () => this.toggleEditPerUnitFields());
         ['edit-total-cost', 'edit-quantity'].forEach(id => {
-            document.getElementById(id).addEventListener('input', () => {
-                this.updateEditCalculatedPrice();
-            });
+            document.getElementById(id).addEventListener('input', () => this.updateEditCalculatedPrice());
         });
-    },
-    
-    // Обновление расчёта цены за штуку в форме добавления
-    updateCalculatedPrice() {
-        if (this.currentTab !== 'items' || !document.getElementById('is-per-unit').checked) return;
-        
-        const total = parseFloat(document.getElementById('total-cost').value) || 0;
-        const qty = parseFloat(document.getElementById('quantity').value) || 1;
-        const pricePerUnit = total / qty;
-        
-        document.getElementById('calculated-price').textContent = 
-            `Цена за штуку: ${this.formatNumber(pricePerUnit)} ₽`;
-    },
-    
-    // Обновление расчёта в модальном окне
-    updateEditCalculatedPrice() {
-        if (this.currentTab !== 'items' || !document.getElementById('edit-is-per-unit').checked) return;
-        
-        const total = parseFloat(document.getElementById('edit-total-cost').value) || 0;
-        const qty = parseFloat(document.getElementById('edit-quantity').value) || 1;
-        const pricePerUnit = total / qty;
-        
-        document.getElementById('edit-calculated-price').textContent = 
-            `Цена за штуку: ${this.formatNumber(pricePerUnit)} ₽`;
-    },
-    
-    // Переключение вкладки
-    switchTab(tab) {
-        if (this.currentTab === tab) return;
-        
-        this.currentTab = tab;
-        
-        // Обновляем активную вкладку
+        document.getElementById('edit-name').addEventListener('input', () => this.updateEditDuplicateWarning());
+    }
+
+    // === ОСНОВНОЙ МЕТОД: ПЕРЕКЛЮЧЕНИЕ ВКЛАДКИ ===
+    renderTab(tab) {
+        // 1. Обновляем активную кнопку
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.tab === tab);
         });
-        
-        // Показываем/скрываем поля в зависимости от вкладки
-        const govCostContainer = document.getElementById('gov-cost-container');
-        const perUnitContainer = document.getElementById('per-unit-container');
-        
-        govCostContainer.style.display = (tab === 'cars' || tab === 'houses') ? 'block' : 'none';
-        perUnitContainer.style.display = (tab === 'items') ? 'block' : 'none';
-        
-        // Сбрасываем форму
+
+        // 2. Сохраняем текущую вкладку
+        this.currentTab = tab;
+
+        // 3. Обновляем видимость полей формы
+        this.updateFormVisibility();
+
+        // 4. Сбрасываем форму и поиск
         this.resetForm();
-        
-        this.render();
+        document.getElementById('search-input').value = '';
+
+        // 5. Рендерим список товаров
+        this.renderItems();
         this.updateEmptyState();
-    },
-    
-    // Сброс формы добавления
+    }
+
+    updateFormVisibility() {
+        const isGovTab = this.currentTab === 'cars' || this.currentTab === 'houses';
+        const isItemsTab = this.currentTab === 'items';
+
+        // Используем безопасное обновление через classList
+        const govContainer = document.getElementById('gov-cost-container');
+        const perUnitContainer = document.getElementById('per-unit-container');
+
+        govContainer.style.display = isGovTab ? 'block' : 'none';
+        perUnitContainer.style.display = isItemsTab ? 'block' : 'none';
+
+        // Сбрасываем состояние чекбокса
+        if (!isItemsTab) {
+            document.getElementById('is-per-unit').checked = false;
+            document.getElementById('per-unit-fields').style.display = 'none';
+        }
+    }
+
     resetForm() {
         document.getElementById('item-form').reset();
         document.getElementById('gov-cost').value = '';
-        document.getElementById('is-per-unit').checked = false;
-        document.getElementById('per-unit-fields').style.display = 'none';
         document.getElementById('total-cost').value = '';
         document.getElementById('quantity').value = '';
         document.getElementById('calculated-price').textContent = '';
-    },
-    
-    // Проверка на дубликат (независимо от регистра)
-    isDuplicate(name) {
-        const normalizedName = name.trim().toLowerCase();
-        return this.data[this.currentTab].some(item => 
-            item.name.trim().toLowerCase() === normalizedName
-        );
-    },
-    
-    // Добавление нового товара
-    addItem() {
+        this.updateDuplicateWarning();
+    }
+
+    // === РАБОТА С ДУБЛИКАТАМИ ===
+    updateDuplicateWarning() {
         const name = document.getElementById('item-name').value.trim();
+        const warning = document.getElementById('duplicate-warning');
+        warning.style.display = name && this.isDuplicate(name) ? 'block' : 'none';
+    }
+
+    updateEditDuplicateWarning() {
+        const name = document.getElementById('edit-name').value.trim();
+        const currentId = document.getElementById('edit-modal').dataset.itemId;
+        const warning = document.getElementById('edit-duplicate-warning');
+        warning.style.display = name && this.isDuplicate(name, currentId) ? 'block' : 'none';
+    }
+
+    isDuplicate(name, excludeId = null) {
+        const normalizedName = name.toLowerCase().trim();
+        return this.data[this.currentTab].some(item => 
+            item.id !== excludeId && 
+            item.name.toLowerCase().trim() === normalizedName
+        );
+    }
+
+    // === ДОБАВЛЕНИЕ ТОВАРА ===
+    addItem() {
+        const rawName = document.getElementById('item-name').value;
+        const name = rawName.trim();
+
         if (!name) {
             alert('Название не может быть пустым');
             return;
         }
-        
-        // Проверка на дубликат
+
         if (this.isDuplicate(name)) {
             alert('Товар с таким названием уже существует!');
             return;
         }
-        
+
         const item = {
             id: Date.now().toString(),
             name,
@@ -188,93 +160,84 @@ const PriceTracker = {
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
-        
-        // Для автомобилей и домов — гос. стоимость
+
+        // Для автомобилей и домов
         if (this.currentTab === 'cars' || this.currentTab === 'houses') {
-            const govCost = parseFloat(document.getElementById('gov-cost').value);
-            if (!isNaN(govCost) && govCost >= 0) {
-                item.govCost = govCost;
+            const costInput = document.getElementById('gov-cost').value;
+            const cost = parseFloat(costInput);
+            if (!isNaN(cost) && cost >= 0) {
+                item.cost = cost;
             }
         }
-        
-        // Для вещей — цена за штуку
+
+        // Для вещей
         if (this.currentTab === 'items' && document.getElementById('is-per-unit').checked) {
-            const total = parseFloat(document.getElementById('total-cost').value);
-            const qty = parseFloat(document.getElementById('quantity').value);
-            
+            const totalInput = document.getElementById('total-cost').value;
+            const qtyInput = document.getElementById('quantity').value;
+            const total = parseFloat(totalInput);
+            const qty = parseFloat(qtyInput);
+
             if (isNaN(total) || total < 0 || isNaN(qty) || qty <= 0) {
-                alert('Пожалуйста, введите корректную общую стоимость и количество');
+                alert('Введите корректную общую стоимость и количество');
                 return;
             }
-            
-            const pricePerUnit = total / qty;
-            item.prices.push(pricePerUnit);
+
             item.isPerUnit = true;
             item.totalCost = total;
             item.quantity = qty;
+            item.prices.push(total / qty);
         }
-        
+
         this.data[this.currentTab].push(item);
         this.saveToStorage();
         this.resetForm();
-        this.render();
+        this.renderItems();
         this.updateEmptyState();
-    },
-    
-    // Рендер списка товаров
-    render() {
+    }
+
+    // === РЕНДЕР ТОВАРОВ ===
+    renderItems() {
         const container = document.getElementById('items-list');
         const searchTerm = document.getElementById('search-input').value.toLowerCase();
         const sortOption = document.getElementById('sort-select').value;
-        
-        // Фильтрация по поиску
+
         let items = this.data[this.currentTab].filter(item => 
             item.name.toLowerCase().includes(searchTerm)
         );
-        
-        // Сортировка
+
         items = this.sortItems(items, sortOption);
-        
-        // Очистка контейнера
         container.innerHTML = '';
-        
+
         if (items.length === 0) {
             document.getElementById('empty-state').style.display = 'block';
             return;
         }
-        
+
         document.getElementById('empty-state').style.display = 'none';
-        
-        // Рендер каждого товара
+
         items.forEach(item => {
-            const itemElement = this.createItemElement(item);
-            container.appendChild(itemElement);
+            const element = this.createItemElement(item);
+            container.appendChild(element);
         });
-    },
-    
-    // Создание элемента товара
+    }
+
     createItemElement(item) {
         const card = document.createElement('div');
         card.className = 'item-card';
         card.dataset.id = item.id;
-        
-        // Вычисляем среднюю цену
-        const avgPrice = this.calculateAveragePrice(item.prices);
+
         const isPerUnit = this.currentTab === 'items' && item.isPerUnit;
-        
-        // Форматируем цены для отображения
-        const formattedPrices = item.prices.map(price => 
-            this.formatNumber(price) + (isPerUnit ? ' ₽/шт' : ' ₽')
-        );
-        const formattedAvgPrice = this.formatNumber(avgPrice) + (isPerUnit ? ' ₽/шт' : ' ₽');
-        
-        // Создаем HTML для карточки
+        const suffix = isPerUnit ? ' ₽/шт' : ' ₽';
+        const avgPrice = this.calculateAveragePrice(item.prices);
+        const formattedAvg = `${this.formatNumber(avgPrice)}${suffix}`;
+        const formattedPrices = item.prices.map(p => `${this.formatNumber(p)}${suffix}`);
+
         card.innerHTML = `
             <div class="item-header">
                 <div>
                     <h3 class="item-title">${this.escapeHtml(item.name)}</h3>
-                    ${item.govCost !== undefined ? `<div class="gov-cost">Гос. стоимость: ${this.formatNumber(item.govCost)} ₽</div>` : ''}
-                    ${isPerUnit ? `<div class="gov-cost">Цена за штуку: ${formattedAvgPrice}</div>` : ''}
+                    ${item.cost !== undefined ? `<div class="gov-cost">Стоимость: ${this.formatNumber(item.cost)} ₽</div>` : ''}
+                    ${isPerUnit ? `<div class="gov-cost">Цена за штуку: ${formattedAvg}</div>` : ''}
                 </div>
                 <button class="edit-btn" data-id="${item.id}">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -288,188 +251,132 @@ const PriceTracker = {
                 <span>Добавлено: ${this.formatDate(item.createdAt)}</span>
                 <span>Обновлено: ${this.formatDate(item.updatedAt)}</span>
             </div>
-            <div class="item-prices" id="prices-${item.id}">
-                ${formattedPrices.map((price, index) => `
-                    <div class="price-tag">
-                        <span class="price-value">${price}</span>
-                        <button class="remove-price" data-id="${item.id}" data-index="${index}">×</button>
-                    </div>
-                `).join('')}
-                ${formattedPrices.length === 0 ? '<p class="text-secondary">Нет цен</p>' : ''}
+            <div class="item-prices">
+                ${formattedPrices.length > 0 
+                    ? formattedPrices.map((p, i) => `
+                        <div class="price-tag">
+                            <span class="price-value">${p}</span>
+                            <button class="remove-price" data-id="${item.id}" data-index="${i}">×</button>
+                        </div>
+                    `).join('')
+                    : '<p class="text-secondary">Нет цен</p>'
+                }
             </div>
             <div class="item-stats">
-                <div class="avg-price">Средняя цена: ${formattedAvgPrice}</div>
+                <div class="avg-price">Средняя цена: ${formattedAvg}</div>
             </div>
         `;
-        
-        // Привязываем обработчики событий
+
         card.querySelector('.edit-btn').addEventListener('click', () => {
             this.openEditModal(item);
         });
-        
+
         card.querySelectorAll('.remove-price').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 this.removePrice(e.target.dataset.id, parseInt(e.target.dataset.index));
             });
         });
-        
+
         return card;
-    },
-    
-    // Открытие модального окна редактирования
+    }
+
+    // === МОДАЛЬНОЕ ОКНО ===
     openEditModal(item) {
         const modal = document.getElementById('edit-modal');
-        const editName = document.getElementById('edit-name');
-        const editGovCost = document.getElementById('edit-gov-cost');
-        const govCostContainer = document.getElementById('edit-gov-cost-container');
-        const perUnitContainer = document.getElementById('edit-per-unit-container');
-        const priceList = document.getElementById('edit-price-list');
-        
-        // Устанавливаем данные в форму
-        editName.value = item.name;
-        
-        // Показываем/скрываем поля гос. стоимости
+        modal.dataset.itemId = item.id;
+
+        // Основное название
+        document.getElementById('edit-name').value = item.name;
+        this.updateEditDuplicateWarning();
+
+        // Стоимость (авто/дома)
+        const govContainer = document.getElementById('edit-gov-cost-container');
         if (this.currentTab === 'cars' || this.currentTab === 'houses') {
-            govCostContainer.style.display = 'block';
-            editGovCost.value = item.govCost || '';
+            govContainer.style.display = 'block';
+            document.getElementById('edit-gov-cost').value = item.cost || '';
         } else {
-            govCostContainer.style.display = 'none';
+            govContainer.style.display = 'none';
         }
-        
-        // Показываем/скрываем поля для "Вещи"
+
+        // Поля для "Вещи"
+        const perUnitContainer = document.getElementById('edit-per-unit-container');
         if (this.currentTab === 'items') {
             perUnitContainer.style.display = 'block';
-            const isPerUnit = item.isPerUnit || false;
+            const isPerUnit = !!item.isPerUnit;
             document.getElementById('edit-is-per-unit').checked = isPerUnit;
             document.getElementById('edit-per-unit-fields').style.display = isPerUnit ? 'block' : 'none';
-            
+
             if (isPerUnit) {
                 document.getElementById('edit-total-cost').value = item.totalCost || '';
                 document.getElementById('edit-quantity').value = item.quantity || '';
                 this.updateEditCalculatedPrice();
-            } else {
-                document.getElementById('edit-total-cost').value = '';
-                document.getElementById('edit-quantity').value = '';
-                document.getElementById('edit-calculated-price').textContent = '';
             }
         } else {
             perUnitContainer.style.display = 'none';
         }
-        
-        // Очищаем список цен
+
+        // Цены
+        const priceList = document.getElementById('edit-price-list');
         priceList.innerHTML = '';
-        
-        // Добавляем существующие цены
         item.prices.forEach((price, index) => {
             this.addPriceToEdit(price, index);
         });
-        
-        // Сохраняем ID товара для последующих операций
-        modal.dataset.itemId = item.id;
-        
-        // Показываем модальное окно
+
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
-    },
-    
-    // Закрытие модального окна
-    closeModal() {
-        document.getElementById('edit-modal').style.display = 'none';
-        document.body.style.overflow = 'auto';
-    },
-    
-    // Добавление цены в модальное окно
-    addPriceToEdit(price, index) {
-        const priceList = document.getElementById('edit-price-list');
-        const priceItem = document.createElement('div');
-        priceItem.className = 'edit-price-item';
-        priceItem.innerHTML = `
-            <input type="number" class="edit-price-input" value="${price}" min="0" data-index="${index}">
-            <button class="btn btn-danger remove-edit-price" data-index="${index}">×</button>
-        `;
-        priceList.appendChild(priceItem);
-        
-        // Привязываем обработчик удаления
-        priceItem.querySelector('.remove-edit-price').addEventListener('click', () => {
-            priceItem.remove();
-        });
-    },
-    
-    // Добавление новой цены в модальное окно
-    addNewPriceToEdit() {
-        const newPriceInput = document.getElementById('new-price');
-        const price = parseFloat(newPriceInput.value);
-        
-        if (isNaN(price) || price < 0) {
-            alert('Пожалуйста, введите корректную цену');
-            return;
-        }
-        
-        const priceList = document.getElementById('edit-price-list');
-        const index = priceList.children.length;
-        this.addPriceToEdit(price, index);
-        newPriceInput.value = '';
-    },
-    
-    // Сохранение изменений товара
+    }
+
     saveItemChanges() {
         const itemId = document.getElementById('edit-modal').dataset.itemId;
         const newName = document.getElementById('edit-name').value.trim();
-        
+
         if (!newName) {
-            alert('Название товара не может быть пустым');
+            alert('Название не может быть пустым');
             return;
         }
-        
-        // Проверка на дубликат (исключая текущий товар)
-        const isDuplicate = this.data[this.currentTab].some(item => 
-            item.id !== itemId && item.name.trim().toLowerCase() === newName.trim().toLowerCase()
-        );
-        
-        if (isDuplicate) {
+
+        if (this.isDuplicate(newName, itemId)) {
             alert('Товар с таким названием уже существует!');
             return;
         }
-        
-        // Находим товар
-        const itemIndex = this.data[this.currentTab].findIndex(item => item.id === itemId);
-        if (itemIndex === -1) return;
-        
-        const item = this.data[this.currentTab][itemIndex];
-        
-        // Обновляем название
+
+        const item = this.data[this.currentTab].find(i => i.id === itemId);
+        if (!item) return;
+
         item.name = newName;
-        
-        // Обновляем гос. стоимость для автомобилей и домов
+        item.updatedAt = new Date().toISOString();
+
+        // Обновляем стоимость
         if (this.currentTab === 'cars' || this.currentTab === 'houses') {
-            const govCost = parseFloat(document.getElementById('edit-gov-cost').value);
-            if (!isNaN(govCost) && govCost >= 0) {
-                item.govCost = govCost;
+            const costInput = document.getElementById('edit-gov-cost').value;
+            const cost = parseFloat(costInput);
+            if (!isNaN(cost) && cost >= 0) {
+                item.cost = cost;
             } else {
-                delete item.govCost;
+                delete item.cost;
             }
         }
-        
-        // Обновляем параметры для "Вещи"
+
+        // Обновляем параметры "Вещи"
         if (this.currentTab === 'items') {
             const isPerUnit = document.getElementById('edit-is-per-unit').checked;
             if (isPerUnit) {
-                const total = parseFloat(document.getElementById('edit-total-cost').value);
-                const qty = parseFloat(document.getElementById('edit-quantity').value);
-                
+                const totalInput = document.getElementById('edit-total-cost').value;
+                const qtyInput = document.getElementById('edit-quantity').value;
+                const total = parseFloat(totalInput);
+                const qty = parseFloat(qtyInput);
+
                 if (isNaN(total) || total < 0 || isNaN(qty) || qty <= 0) {
-                    alert('Пожалуйста, введите корректную общую стоимость и количество');
+                    alert('Введите корректные значения');
                     return;
                 }
-                
-                const pricePerUnit = total / qty;
+
                 item.isPerUnit = true;
                 item.totalCost = total;
                 item.quantity = qty;
-                
-                // Если нет других цен, добавляем рассчитанную
+
                 if (item.prices.length === 0) {
-                    item.prices = [pricePerUnit];
+                    item.prices = [total / qty];
                 }
             } else {
                 item.isPerUnit = false;
@@ -477,52 +384,157 @@ const PriceTracker = {
                 delete item.quantity;
             }
         }
-        
+
         // Обновляем цены
-        const priceInputs = document.querySelectorAll('.edit-price-input');
         const newPrices = [];
-        
-        priceInputs.forEach(input => {
+        document.querySelectorAll('.edit-price-input').forEach(input => {
             const price = parseFloat(input.value);
             if (!isNaN(price) && price >= 0) {
                 newPrices.push(price);
             }
         });
-        
         item.prices = newPrices;
-        item.updatedAt = new Date().toISOString();
-        
+
         this.saveToStorage();
-        this.render();
+        this.renderItems();
         this.closeModal();
-    },
-    
-    // Удаление товара
+    }
+
+    // === ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ===
+    togglePerUnitFields() {
+        const show = document.getElementById('is-per-unit').checked;
+        document.getElementById('per-unit-fields').style.display = show ? 'block' : 'none';
+        if (show) this.updateCalculatedPrice();
+    }
+
+    toggleEditPerUnitFields() {
+        const show = document.getElementById('edit-is-per-unit').checked;
+        document.getElementById('edit-per-unit-fields').style.display = show ? 'block' : 'none';
+        if (show) this.updateEditCalculatedPrice();
+    }
+
+    updateCalculatedPrice() {
+        const total = parseFloat(document.getElementById('total-cost').value) || 0;
+        const qty = parseFloat(document.getElementById('quantity').value) || 1;
+        document.getElementById('calculated-price').textContent = 
+            `Цена за штуку: ${this.formatNumber(total / qty)} ₽`;
+    }
+
+    updateEditCalculatedPrice() {
+        const total = parseFloat(document.getElementById('edit-total-cost').value) || 0;
+        const qty = parseFloat(document.getElementById('edit-quantity').value) || 1;
+        document.getElementById('edit-calculated-price').textContent = 
+            `Цена за штуку: ${this.formatNumber(total / qty)} ₽`;
+    }
+
+    addPriceToEdit(price, index) {
+        const priceList = document.getElementById('edit-price-list');
+        const div = document.createElement('div');
+        div.className = 'edit-price-item';
+        div.innerHTML = `
+            <input type="number" class="edit-price-input" value="${price}" min="0">
+            <button class="btn btn-danger remove-edit-price">&times;</button>
+        `;
+        priceList.appendChild(div);
+
+        div.querySelector('.remove-edit-price').addEventListener('click', () => {
+            div.remove();
+        });
+    }
+
+    addNewPriceToEdit() {
+        const input = document.getElementById('new-price');
+        const price = parseFloat(input.value);
+        if (isNaN(price) || price < 0) {
+            alert('Введите корректную цену');
+            return;
+        }
+        this.addPriceToEdit(price, -1);
+        input.value = '';
+    }
+
+    removePrice(itemId, index) {
+        const item = this.data[this.currentTab].find(i => i.id === itemId);
+        if (item) {
+            item.prices.splice(index, 1);
+            item.updatedAt = new Date().toISOString();
+            this.saveToStorage();
+            this.renderItems();
+        }
+    }
+
     deleteItem() {
-        if (!confirm('Вы уверены, что хотите удалить этот товар?')) return;
-        
+        if (!confirm('Удалить товар? Это действие нельзя отменить.')) return;
         const itemId = document.getElementById('edit-modal').dataset.itemId;
-        this.data[this.currentTab] = this.data[this.currentTab].filter(item => item.id !== itemId);
+        this.data[this.currentTab] = this.data[this.currentTab].filter(i => i.id !== itemId);
         this.saveToStorage();
-        this.render();
+        this.renderItems();
         this.updateEmptyState();
         this.closeModal();
-    },
-    
-    // Удаление цены у товара
-    removePrice(itemId, priceIndex) {
-        const item = this.data[this.currentTab].find(item => item.id === itemId);
-        if (!item) return;
-        
-        item.prices.splice(priceIndex, 1);
-        item.updatedAt = new Date().toISOString();
-        this.saveToStorage();
-        this.render();
-    },
-    
-    // Сортировка товаров
+    }
+
+    closeModal() {
+        document.getElementById('edit-modal').style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+
     sortItems(items, option) {
         return [...items].sort((a, b) => {
             switch (option) {
-                case 'name':
-  
+                case 'name': return a.name.localeCompare(b.name, 'ru');
+                case 'date': return new Date(b.updatedAt) - new Date(a.updatedAt);
+                case 'price': 
+                    return this.calculateAveragePrice(b.prices) - this.calculateAveragePrice(a.prices);
+                default: return 0;
+            }
+        });
+    }
+
+    calculateAveragePrice(prices) {
+        if (prices.length === 0) return 0;
+        return prices.reduce((sum, p) => sum + p, 0) / prices.length;
+    }
+
+    formatNumber(num) {
+        if (num === 0) return '0';
+        if (num >= 1000000) return (num / 1000000).toFixed(2).replace(/\.?0+$/, '') + ' млн';
+        if (num >= 1000) return (num / 1000).toFixed(2).replace(/\.?0+$/, '') + ' тыс';
+        return num.toString();
+    }
+
+    formatDate(dateString) {
+        return new Date(dateString).toLocaleDateString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+    }
+
+    escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '<',
+            '>': '>',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    saveToStorage() {
+        try {
+            localStorage.setItem('priceTrackerData', JSON.stringify(this.data));
+        } catch (e) {
+            console.error('Не удалось сохранить данные:', e);
+            alert('Ошибка сохранения данных. Проверьте localStorage.');
+        }
+    }
+
+    loadFromStorage() {
+        try {
+            const data = localStorage.getItem('priceTrackerData');
+            if (data) {
+                const parsed = JSON.parse(data);
+                this.data = {
+                    skins: Array.isArray(parsed.skins) ? parsed.skins : [],
+                    accessories: Array.isArra
