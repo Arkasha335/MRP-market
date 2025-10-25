@@ -4,10 +4,12 @@ const PriceTracker = {
     currentTab: 'skins',
     
     // Данные по разделам
-    data: {
+     {
         skins: [],
         accessories: [],
-        cars: []
+        items: [],
+        cars: [],
+        houses: []
     },
     
     // Инициализация приложения
@@ -67,6 +69,58 @@ const PriceTracker = {
         document.getElementById('add-price-btn').addEventListener('click', () => {
             this.addNewPriceToEdit();
         });
+        
+        // Обработка чекбокса "цена за штуку" в форме добавления
+        document.getElementById('is-per-unit').addEventListener('change', () => {
+            document.getElementById('per-unit-fields').style.display = 
+                this.currentTab === 'items' && document.getElementById('is-per-unit').checked ? 'block' : 'none';
+            this.updateCalculatedPrice();
+        });
+        
+        // Обновление расчёта при изменении полей
+        ['total-cost', 'quantity'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => {
+                this.updateCalculatedPrice();
+            });
+        });
+        
+        // Обработка чекбокса в модальном окне
+        document.getElementById('edit-is-per-unit').addEventListener('change', () => {
+            document.getElementById('edit-per-unit-fields').style.display = 
+                this.currentTab === 'items' && document.getElementById('edit-is-per-unit').checked ? 'block' : 'none';
+            this.updateEditCalculatedPrice();
+        });
+        
+        // Обновление расчёта в модальном окне
+        ['edit-total-cost', 'edit-quantity'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => {
+                this.updateEditCalculatedPrice();
+            });
+        });
+    },
+    
+    // Обновление расчёта цены за штуку в форме добавления
+    updateCalculatedPrice() {
+        if (this.currentTab !== 'items' || !document.getElementById('is-per-unit').checked) return;
+        
+        const total = parseFloat(document.getElementById('total-cost').value) || 0;
+        const qty = parseFloat(document.getElementById('quantity').value) || 1;
+        const pricePerUnit = total / qty;
+        
+        document.getElementById('calculated-price').textContent = 
+            `Цена за штуку: ${this.formatNumber(pricePerUnit)} ₽`;
+    },
+    
+    // Обновление расчёта в модальном окне
+    updateEditCalculatedPrice() {
+        if (this.currentTab !== 'items' || !document.getElementById('edit-is-per-unit').checked) return;
+        
+        const total = parseFloat(document.getElementById('edit-total-cost').value) || 0;
+        const qty = parseFloat(document.getElementById('edit-quantity').value) || 1;
+        const pricePerUnit = total / qty;
+        
+        document.getElementById('edit-calculated-price').textContent = 
+            `Цена за штуку: ${this.formatNumber(pricePerUnit)} ₽`;
     },
     
     // Переключение вкладки
@@ -80,22 +134,52 @@ const PriceTracker = {
             btn.classList.toggle('active', btn.dataset.tab === tab);
         });
         
-        // Показываем/скрываем поле гос. стоимости
+        // Показываем/скрываем поля в зависимости от вкладки
         const govCostContainer = document.getElementById('gov-cost-container');
-        govCostContainer.style.display = tab === 'cars' ? 'block' : 'none';
+        const perUnitContainer = document.getElementById('per-unit-container');
         
-        // Очищаем форму
-        document.getElementById('item-form').reset();
-        document.getElementById('gov-cost').value = '';
+        govCostContainer.style.display = (tab === 'cars' || tab === 'houses') ? 'block' : 'none';
+        perUnitContainer.style.display = (tab === 'items') ? 'block' : 'none';
+        
+        // Сбрасываем форму
+        this.resetForm();
         
         this.render();
         this.updateEmptyState();
     },
     
+    // Сброс формы добавления
+    resetForm() {
+        document.getElementById('item-form').reset();
+        document.getElementById('gov-cost').value = '';
+        document.getElementById('is-per-unit').checked = false;
+        document.getElementById('per-unit-fields').style.display = 'none';
+        document.getElementById('total-cost').value = '';
+        document.getElementById('quantity').value = '';
+        document.getElementById('calculated-price').textContent = '';
+    },
+    
+    // Проверка на дубликат (независимо от регистра)
+    isDuplicate(name) {
+        const normalizedName = name.trim().toLowerCase();
+        return this.data[this.currentTab].some(item => 
+            item.name.trim().toLowerCase() === normalizedName
+        );
+    },
+    
     // Добавление нового товара
     addItem() {
         const name = document.getElementById('item-name').value.trim();
-        if (!name) return;
+        if (!name) {
+            alert('Название не может быть пустым');
+            return;
+        }
+        
+        // Проверка на дубликат
+        if (this.isDuplicate(name)) {
+            alert('Товар с таким названием уже существует!');
+            return;
+        }
         
         const item = {
             id: Date.now().toString(),
@@ -105,18 +189,34 @@ const PriceTracker = {
             updatedAt: new Date().toISOString()
         };
         
-        // Для автомобилей добавляем гос. стоимость
-        if (this.currentTab === 'cars') {
+        // Для автомобилей и домов — гос. стоимость
+        if (this.currentTab === 'cars' || this.currentTab === 'houses') {
             const govCost = parseFloat(document.getElementById('gov-cost').value);
             if (!isNaN(govCost) && govCost >= 0) {
                 item.govCost = govCost;
             }
         }
         
+        // Для вещей — цена за штуку
+        if (this.currentTab === 'items' && document.getElementById('is-per-unit').checked) {
+            const total = parseFloat(document.getElementById('total-cost').value);
+            const qty = parseFloat(document.getElementById('quantity').value);
+            
+            if (isNaN(total) || total < 0 || isNaN(qty) || qty <= 0) {
+                alert('Пожалуйста, введите корректную общую стоимость и количество');
+                return;
+            }
+            
+            const pricePerUnit = total / qty;
+            item.prices.push(pricePerUnit);
+            item.isPerUnit = true;
+            item.totalCost = total;
+            item.quantity = qty;
+        }
+        
         this.data[this.currentTab].push(item);
         this.saveToStorage();
-        document.getElementById('item-form').reset();
-        document.getElementById('gov-cost').value = '';
+        this.resetForm();
         this.render();
         this.updateEmptyState();
     },
@@ -160,10 +260,13 @@ const PriceTracker = {
         
         // Вычисляем среднюю цену
         const avgPrice = this.calculateAveragePrice(item.prices);
+        const isPerUnit = this.currentTab === 'items' && item.isPerUnit;
         
         // Форматируем цены для отображения
-        const formattedPrices = item.prices.map(price => this.formatNumber(price));
-        const formattedAvgPrice = this.formatNumber(avgPrice);
+        const formattedPrices = item.prices.map(price => 
+            this.formatNumber(price) + (isPerUnit ? ' ₽/шт' : ' ₽')
+        );
+        const formattedAvgPrice = this.formatNumber(avgPrice) + (isPerUnit ? ' ₽/шт' : ' ₽');
         
         // Создаем HTML для карточки
         card.innerHTML = `
@@ -171,6 +274,7 @@ const PriceTracker = {
                 <div>
                     <h3 class="item-title">${this.escapeHtml(item.name)}</h3>
                     ${item.govCost !== undefined ? `<div class="gov-cost">Гос. стоимость: ${this.formatNumber(item.govCost)} ₽</div>` : ''}
+                    ${isPerUnit ? `<div class="gov-cost">Цена за штуку: ${formattedAvgPrice}</div>` : ''}
                 </div>
                 <button class="edit-btn" data-id="${item.id}">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -187,14 +291,14 @@ const PriceTracker = {
             <div class="item-prices" id="prices-${item.id}">
                 ${formattedPrices.map((price, index) => `
                     <div class="price-tag">
-                        <span class="price-value">${price} ₽</span>
+                        <span class="price-value">${price}</span>
                         <button class="remove-price" data-id="${item.id}" data-index="${index}">×</button>
                     </div>
                 `).join('')}
                 ${formattedPrices.length === 0 ? '<p class="text-secondary">Нет цен</p>' : ''}
             </div>
             <div class="item-stats">
-                <div class="avg-price">Средняя цена: ${formattedAvgPrice} ₽</div>
+                <div class="avg-price">Средняя цена: ${formattedAvgPrice}</div>
             </div>
         `;
         
@@ -218,17 +322,38 @@ const PriceTracker = {
         const editName = document.getElementById('edit-name');
         const editGovCost = document.getElementById('edit-gov-cost');
         const govCostContainer = document.getElementById('edit-gov-cost-container');
+        const perUnitContainer = document.getElementById('edit-per-unit-container');
         const priceList = document.getElementById('edit-price-list');
         
         // Устанавливаем данные в форму
         editName.value = item.name;
         
-        // Показываем/скрываем поле гос. стоимости
-        if (this.currentTab === 'cars') {
+        // Показываем/скрываем поля гос. стоимости
+        if (this.currentTab === 'cars' || this.currentTab === 'houses') {
             govCostContainer.style.display = 'block';
             editGovCost.value = item.govCost || '';
         } else {
             govCostContainer.style.display = 'none';
+        }
+        
+        // Показываем/скрываем поля для "Вещи"
+        if (this.currentTab === 'items') {
+            perUnitContainer.style.display = 'block';
+            const isPerUnit = item.isPerUnit || false;
+            document.getElementById('edit-is-per-unit').checked = isPerUnit;
+            document.getElementById('edit-per-unit-fields').style.display = isPerUnit ? 'block' : 'none';
+            
+            if (isPerUnit) {
+                document.getElementById('edit-total-cost').value = item.totalCost || '';
+                document.getElementById('edit-quantity').value = item.quantity || '';
+                this.updateEditCalculatedPrice();
+            } else {
+                document.getElementById('edit-total-cost').value = '';
+                document.getElementById('edit-quantity').value = '';
+                document.getElementById('edit-calculated-price').textContent = '';
+            }
+        } else {
+            perUnitContainer.style.display = 'none';
         }
         
         // Очищаем список цен
@@ -290,10 +415,19 @@ const PriceTracker = {
     saveItemChanges() {
         const itemId = document.getElementById('edit-modal').dataset.itemId;
         const newName = document.getElementById('edit-name').value.trim();
-        const newGovCost = document.getElementById('edit-gov-cost').value;
         
         if (!newName) {
             alert('Название товара не может быть пустым');
+            return;
+        }
+        
+        // Проверка на дубликат (исключая текущий товар)
+        const isDuplicate = this.data[this.currentTab].some(item => 
+            item.id !== itemId && item.name.trim().toLowerCase() === newName.trim().toLowerCase()
+        );
+        
+        if (isDuplicate) {
+            alert('Товар с таким названием уже существует!');
             return;
         }
         
@@ -306,13 +440,41 @@ const PriceTracker = {
         // Обновляем название
         item.name = newName;
         
-        // Обновляем гос. стоимость для автомобилей
-        if (this.currentTab === 'cars') {
-            const govCost = parseFloat(newGovCost);
+        // Обновляем гос. стоимость для автомобилей и домов
+        if (this.currentTab === 'cars' || this.currentTab === 'houses') {
+            const govCost = parseFloat(document.getElementById('edit-gov-cost').value);
             if (!isNaN(govCost) && govCost >= 0) {
                 item.govCost = govCost;
             } else {
                 delete item.govCost;
+            }
+        }
+        
+        // Обновляем параметры для "Вещи"
+        if (this.currentTab === 'items') {
+            const isPerUnit = document.getElementById('edit-is-per-unit').checked;
+            if (isPerUnit) {
+                const total = parseFloat(document.getElementById('edit-total-cost').value);
+                const qty = parseFloat(document.getElementById('edit-quantity').value);
+                
+                if (isNaN(total) || total < 0 || isNaN(qty) || qty <= 0) {
+                    alert('Пожалуйста, введите корректную общую стоимость и количество');
+                    return;
+                }
+                
+                const pricePerUnit = total / qty;
+                item.isPerUnit = true;
+                item.totalCost = total;
+                item.quantity = qty;
+                
+                // Если нет других цен, добавляем рассчитанную
+                if (item.prices.length === 0) {
+                    item.prices = [pricePerUnit];
+                }
+            } else {
+                item.isPerUnit = false;
+                delete item.totalCost;
+                delete item.quantity;
             }
         }
         
@@ -363,131 +525,4 @@ const PriceTracker = {
         return [...items].sort((a, b) => {
             switch (option) {
                 case 'name':
-                    return a.name.localeCompare(b.name);
-                case 'date':
-                    return new Date(b.updatedAt) - new Date(a.updatedAt);
-                case 'price':
-                    const avgA = this.calculateAveragePrice(a.prices);
-                    const avgB = this.calculateAveragePrice(b.prices);
-                    return avgB - avgA;
-                default:
-                    return 0;
-            }
-        });
-    },
-    
-    // Расчет средней цены
-    calculateAveragePrice(prices) {
-        if (prices.length === 0) return 0;
-        const sum = prices.reduce((acc, price) => acc + price, 0);
-        return sum / prices.length;
-    },
-    
-    // Форматирование чисел
-    formatNumber(num) {
-        if (num === 0) return '0';
-        if (num >= 1000000) {
-            return (num / 1000000).toFixed(2).replace(/\.?0+$/, '') + ' млн';
-        }
-        if (num >= 1000) {
-            return (num / 1000).toFixed(2).replace(/\.?0+$/, '') + ' тыс';
-        }
-        return num.toString();
-    },
-    
-    // Форматирование даты
-    formatDate(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('ru-RU', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
-    },
-    
-    // Экранирование HTML
-    escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    },
-    
-    // Сохранение данных в localStorage
-    saveToStorage() {
-        localStorage.setItem('priceTrackerData', JSON.stringify(this.data));
-    },
-    
-    // Загрузка данных из localStorage
-    loadFromStorage() {
-        const data = localStorage.getItem('priceTrackerData');
-        if (data) {
-            this.data = JSON.parse(data);
-        }
-    },
-    
-    // Обновление состояния пустого списка
-    updateEmptyState() {
-        const isEmpty = this.data[this.currentTab].length === 0;
-        document.getElementById('empty-state').style.display = isEmpty ? 'block' : 'none';
-    },
-    
-    // Экспорт данных в TXT файл
-    exportData() {
-        let content = 'Price Tracker - Экспорт данных\n';
-        content += '=============================\n\n';
-        
-        // Экспорт для каждого раздела
-        const sections = [
-            { key: 'skins', title: 'Скины' },
-            { key: 'accessories', title: 'Аксессуары' },
-            { key: 'cars', title: 'Автомобили' }
-        ];
-        
-        sections.forEach(section => {
-            content += `${section.title}\n`;
-            content += `${'='.repeat(section.title.length)}\n\n`;
-            
-            if (this.data[section.key].length === 0) {
-                content += 'Нет товаров\n\n';
-                return;
-            }
-            
-            this.data[section.key].forEach(item => {
-                content += `Название: ${item.name}\n`;
-                content += `Добавлено: ${this.formatDate(item.createdAt)}\n`;
-                content += `Обновлено: ${this.formatDate(item.updatedAt)}\n`;
-                
-                if (item.govCost !== undefined) {
-                    content += `Гос. стоимость: ${item.govCost} ₽\n`;
-                }
-                
-                if (item.prices.length > 0) {
-                    content += `Цены: ${item.prices.join(', ')} ₽\n`;
-                    content += `Средняя цена: ${this.calculateAveragePrice(item.prices).toFixed(2)} ₽\n`;
-                } else {
-                    content += 'Цены: не указаны\n';
-                }
-                
-                content += '\n';
-            });
-            
-            content += '\n';
-        });
-        
-        // Создание и скачивание файла
-        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `price-tracker-export-${new Date().toISOString().slice(0, 10)}.txt`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    }
-};
-
-// Инициализация приложения при загрузке
-document.addEventListener('DOMContentLoaded', () => {
-    PriceTracker.init();
-});
+  
