@@ -580,6 +580,10 @@ body {
     .tabs {
         justify-content: flex-start;
     }
+    /* FIX: Гарантируем, что скрытые поля не мешают layout */
+[style*="display: none"] {
+    display: none !important;
+}
 }
 
 /* Анимации */
