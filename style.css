@@ -43,7 +43,20 @@ body {
     min-height: 100vh;
     padding: var(--spacing-md);
 }
+/* ... предыдущие стили без изменений до .form-group ... */
 
+.form-group {
+    margin-bottom: var(--spacing-md);
+}
+
+/* НОВОЕ: стиль для предупреждений */
+.warning {
+    color: var(--danger);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* ... остальной CSS без изменений ... */
 .container {
     max-width: 800px;
     margin: 0 auto;
