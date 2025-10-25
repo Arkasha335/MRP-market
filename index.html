@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Price Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Заголовок -->
+        <header class="header">
+            <h1>Price Tracker</h1>
+            <p>Отслеживайте цены на игровые предметы</p>
+        </header>
+
+        <!-- Навигация по разделам -->
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="skins">Скины</button>
+            <button class="tab-btn" data-tab="accessories">Аксессуары</button>
+            <button class="tab-btn" data-tab="cars">Автомобили</button>
+        </nav>
+
+        <!-- Панель управления -->
+        <div class="controls">
+            <div class="search-container">
+                <input type="text" id="search-input" placeholder="Поиск по названию...">
+                <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </div>
+            
+            <div class="sort-controls">
+                <label for="sort-select">Сортировать:</label>
+                <select id="sort-select">
+                    <option value="name">По названию</option>
+                    <option value="date">По дате</option>
+                    <option value="price">По средней цене</option>
+                </select>
+            </div>
+            
+            <button id="export-btn" class="btn btn-secondary">
+                Экспорт данных
+            </button>
+        </div>
+
+        <!-- Форма добавления товара -->
+        <div class="add-item-form">
+            <form id="item-form">
+                <div class="form-group">
+                    <input type="text" id="item-name" placeholder="Название товара" required>
+                </div>
+                
+                <div class="form-group" id="gov-cost-container" style="display: none;">
+                    <input type="number" id="gov-cost" placeholder="Гос. стоимость" min="0">
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Добавить товар</button>
+            </form>
+        </div>
+
+        <!-- Список товаров -->
+        <div class="items-list" id="items-list">
+            <!-- Товары будут добавляться сюда динамически -->
+        </div>
+
+        <!-- Пустое состояние -->
+        <div class="empty-state" id="empty-state">
+            <div class="empty-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+            </div>
+            <h3>Нет товаров</h3>
+            <p>Добавьте первый товар, чтобы начать отслеживание цен</p>
+        </div>
+    </div>
+
+    <!-- Модальное окно для редактирования -->
+    <div class="modal" id="edit-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Редактировать товар</h3>
+                <button class="close-btn" id="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="edit-name">Название товара</label>
+                    <input type="text" id="edit-name" required>
+                </div>
+                
+                <div class="form-group" id="edit-gov-cost-container" style="display: none;">
+                    <label for="edit-gov-cost">Гос. стоимость</label>
+                    <input type="number" id="edit-gov-cost" min="0">
+                </div>
+                
+                <div class="price-list" id="edit-price-list">
+                    <!-- Цены будут добавляться сюда -->
+                </div>
+                
+                <div class="form-group">
+                    <label for="new-price">Добавить новую цену</label>
+                    <div class="input-with-btn">
+                        <input type="number" id="new-price" min="0" placeholder="Введите цену">
+                        <button id="add-price-btn" class="btn btn-sm">+</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="save-changes-btn" class="btn btn-primary">Сохранить изменения</button>
+                <button id="delete-item-btn" class="btn btn-danger">Удалить товар</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+                      </html>
