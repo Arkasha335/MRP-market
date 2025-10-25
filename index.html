@@ -55,12 +55,17 @@
             <form id="item-form">
                 <div class="form-group">
                     <input type="text" id="item-name" placeholder="Название товара" required>
+                    <div id="duplicate-warning" class="warning" style="display: none; margin-top: 4px;">
+                        Товар с таким названием уже существует!
+                    </div>
                 </div>
                 
+                <!-- Для автомобилей и домов -->
                 <div class="form-group" id="gov-cost-container" style="display: none;">
-                    <input type="number" id="gov-cost" placeholder="Гос. стоимость" min="0">
+                    <input type="number" id="gov-cost" placeholder="Стоимость" min="0">
                 </div>
                 
+                <!-- Для вещей -->
                 <div class="form-group" id="per-unit-container" style="display: none;">
                     <label class="checkbox-label">
                         <input type="checkbox" id="is-per-unit">
@@ -107,13 +112,18 @@
                 <div class="form-group">
                     <label for="edit-name">Название товара</label>
                     <input type="text" id="edit-name" required>
+                    <div id="edit-duplicate-warning" class="warning" style="display: none; margin-top: 4px;">
+                        Товар с таким названием уже существует!
+                    </div>
                 </div>
                 
+                <!-- Для автомобилей и домов -->
                 <div class="form-group" id="edit-gov-cost-container" style="display: none;">
-                    <label for="edit-gov-cost">Гос. стоимость</label>
+                    <label for="edit-gov-cost">Стоимость</label>
                     <input type="number" id="edit-gov-cost" min="0">
                 </div>
                 
+                <!-- Для вещей -->
                 <div class="form-group" id="edit-per-unit-container" style="display: none;">
                     <label class="checkbox-label">
                         <input type="checkbox" id="edit-is-per-unit">
