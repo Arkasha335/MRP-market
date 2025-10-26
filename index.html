@@ -30,7 +30,7 @@
         <div class="controls">
             <div class="search-container">
                 <input type="text" id="search-input" placeholder="Поиск по названию...">
-                <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg class="search-icon" xmlns="http://www.w.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="11" cy="11" r="8"></circle>
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
@@ -64,22 +64,7 @@
                 <div class="form-group" id="gov-cost-container" style="display: none;">
                     <input type="number" id="gov-cost" placeholder="Стоимость" min="0">
                 </div>
-                
-                <!-- Для вещей -->
-                <div class="form-group" id="per-unit-container" style="display: none;">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="is-per-unit">
-                        <span>Цена за одну штуку</span>
-                    </label>
-                    <div id="per-unit-fields" style="display: none; margin-top: 8px;">
-                        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                            <input type="number" id="total-cost" placeholder="Общая стоимость" min="0">
-                            <input type="number" id="quantity" placeholder="Количество" min="1">
-                        </div>
-                        <div id="calculated-price" style="color: var(--success); font-weight: 500;"></div>
-                    </div>
-                </div>
-                
+                                
                 <button type="submit" class="btn btn-primary">Добавить товар</button>
             </form>
         </div>
@@ -123,31 +108,39 @@
                     <input type="number" id="edit-gov-cost" min="0">
                 </div>
                 
-                <!-- Для вещей -->
-                <div class="form-group" id="edit-per-unit-container" style="display: none;">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="edit-is-per-unit">
-                        <span>Цена за одну штуку</span>
-                    </label>
-                    <div id="edit-per-unit-fields" style="display: none; margin-top: 8px;">
-                        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                            <input type="number" id="edit-total-cost" placeholder="Общая стоимость" min="0">
-                            <input type="number" id="edit-quantity" placeholder="Количество" min="1">
-                        </div>
-                        <div id="edit-calculated-price" style="color: var(--success); font-weight: 500;"></div>
-                    </div>
-                </div>
-                
                 <label>Цены</label>
                 <div class="price-list" id="edit-price-list">
                     <!-- Цены будут добавляться сюда -->
                 </div>
                 
-                <div class="form-group">
-                    <label for="new-price">Добавить новую цену</label>
-                    <div class="input-with-btn">
-                        <input type="number" id="new-price" min="0" placeholder="Введите цену">
-                        <button id="add-price-btn" class="btn btn-sm">+</button>
+                <!-- Блок добавления новой цены -->
+                <div class="add-price-container">
+                    <label>Добавить новую цену</label>
+                    
+                    <!-- Переключатель для "Вещей" -->
+                    <div class="form-group" id="price-calc-toggle-container" style="display: none;">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="calculate-per-unit-checkbox">
+                            <span>Рассчитать цену за штуку</span>
+                        </label>
+                    </div>
+
+                    <!-- Поле для обычной цены -->
+                    <div id="standard-price-container">
+                        <div class="input-with-btn">
+                            <input type="number" id="new-price" min="0" placeholder="Введите цену">
+                            <button id="add-price-btn" class="btn btn-sm">+</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Поля для расчета цены -->
+                    <div id="per-unit-price-container" style="display: none;">
+                        <div class="input-group">
+                            <input type="number" id="new-total-cost" placeholder="Общая стоимость" min="0">
+                            <input type="number" id="new-quantity" placeholder="Количество" min="1">
+                        </div>
+                        <div id="new-calculated-price" class="calculated-price-preview"></div>
+                        <button id="add-calculated-price-btn" class="btn btn-sm">Добавить рассчитанную цену</button>
                     </div>
                 </div>
             </div>
