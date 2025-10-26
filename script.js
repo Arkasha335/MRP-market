@@ -27,7 +27,11 @@ const PriceTracker = {
         document.getElementById('edit-name').addEventListener('input', e => this.checkEditDuplicate(e.target.value));
         document.getElementById('search-input').addEventListener('input', () => this.render());
         document.getElementById('sort-select').addEventListener('change', () => this.render());
+        
+        // Управление данными
         document.getElementById('export-btn').addEventListener('click', () => this.exportData());
+        document.getElementById('import-btn').addEventListener('click', () => document.getElementById('import-file-input').click());
+        document.getElementById('import-file-input').addEventListener('change', e => this.importData(e));
 
         // Модальное окно
         document.getElementById('close-modal').addEventListener('click', () => this.closeModal());
@@ -108,22 +112,38 @@ const PriceTracker = {
         const card = document.createElement('div');
         card.className = 'item-card';
         const avgPrice = this.calculateAveragePrice(item.prices);
-        const suffix = this.currentTab === 'items' ? ' ₽/шт' : ' ₽';
+        const avgSuffix = this.currentTab === 'items' ? ' ₽/шт' : ' ₽';
+
         const pricesHTML = item.prices.length > 0
-            ? item.prices.map(p => `<div class="price-tag"><span class="price-value">${this.formatNumber(typeof p === 'object' ? p.perUnit : p)}${suffix}</span></div>`).join('')
+            ? item.prices.map(p => {
+                const isCalculated = typeof p === 'object';
+                const priceValue = isCalculated ? p.perUnit : p;
+                let suffix = ' ₽';
+                if (this.currentTab === 'items') {
+                    suffix = isCalculated ? ' ₽/шт' : ' ₽';
+                }
+                return `<div class="price-tag"><span class="price-value">${this.formatNumber(priceValue)}${suffix}</span></div>`;
+            }).join('')
             : `<span style="color: var(--text-secondary); font-size: 0.9rem;">Нет цен</span>`;
+
         card.innerHTML = `
             <div class="item-header">
                 <div>
                     <h3 class="item-title">${this.escapeHtml(item.name)}</h3>
                     ${item.cost !== undefined ? `<div class="gov-cost">Стоимость: ${this.formatNumber(item.cost)} ₽</div>` : ''}
                 </div>
-                <button class="edit-btn" data-id="${item.id}">Редактировать</button>
+                <button class="edit-btn">Редактировать</button>
             </div>
             <div class="item-meta">Добавлено: ${this.formatDate(item.createdAt)}</div>
             <div class="item-prices">${pricesHTML}</div>
-            <div class="item-stats"><div class="avg-price">Средняя цена: ${this.formatNumber(avgPrice)}${suffix}</div></div>`;
-        card.querySelector('.edit-btn').addEventListener('click', e => this.openEditModal(e.target.dataset.id));
+            <div class="item-stats"><div class="avg-price">Средняя цена: ${this.formatNumber(avgPrice)}${avgSuffix}</div></div>`;
+        
+        // === ИСПРАВЛЕНИЕ: Надежная привязка события ===
+        const editBtn = card.querySelector('.edit-btn');
+        if (editBtn) {
+            editBtn.addEventListener('click', () => this.openEditModal(item.id));
+        }
+
         return card;
     },
 
@@ -131,12 +151,7 @@ const PriceTracker = {
         const originalItem = this.data[this.currentTab].find(i => i.id === itemId);
         if (!originalItem) return;
         
-        // Создаем ИЗОЛИРОВАННОЕ состояние для модального окна
-        this.modalState = {
-            isOpen: true,
-            itemId: itemId,
-            itemCopy: JSON.parse(JSON.stringify(originalItem)) // Глубокая копия
-        };
+        this.modalState = { isOpen: true, itemId: itemId, itemCopy: JSON.parse(JSON.stringify(originalItem)) };
 
         document.getElementById('edit-name').value = this.modalState.itemCopy.name;
         this.checkEditDuplicate(this.modalState.itemCopy.name);
@@ -163,10 +178,15 @@ const PriceTracker = {
         this.modalState.itemCopy.prices.forEach((price, index) => {
             const itemEl = document.createElement('div');
             itemEl.className = 'edit-price-item';
-            const suffix = this.currentTab === 'items' ? ' ₽/шт' : ' ₽';
-            let detailsHTML = typeof price === 'object'
-                ? `<div class="edit-price-details"><span class="main-price">${this.formatNumber(price.perUnit)}${suffix}</span><div class="sub-details">Общая: ${this.formatNumber(price.totalCost)} ₽, Кол-во: ${this.formatNumber(price.quantity)} шт.</div></div>`
-                : `<div class="edit-price-details"><span class="main-price">${this.formatNumber(price)}${suffix}</span></div>`;
+            const isCalculated = typeof price === 'object';
+            let detailsHTML;
+
+            if (isCalculated) {
+                detailsHTML = `<div class="edit-price-details"><span class="main-price">${this.formatNumber(price.perUnit)} ₽/шт</span><div class="sub-details">Общая: ${this.formatNumber(price.totalCost)} ₽, Кол-во: ${this.formatNumber(price.quantity)} шт.</div></div>`;
+            } else {
+                const suffix = this.currentTab === 'items' ? ' ₽' : ' ₽';
+                detailsHTML = `<div class="edit-price-details"><span class="main-price">${this.formatNumber(price)}${suffix}</span></div>`;
+            }
             itemEl.innerHTML = `${detailsHTML}<button class="remove-edit-price">&times;</button>`;
             itemEl.querySelector('.remove-edit-price').addEventListener('click', () => {
                 this.modalState.itemCopy.prices.splice(index, 1);
@@ -212,7 +232,6 @@ const PriceTracker = {
         const newName = document.getElementById('edit-name').value.trim();
         if (!newName || this.isDuplicate(newName, this.modalState.itemId)) return alert('Название не может быть пустым или дублироваться.');
         
-        // Обновляем КОПИЮ
         this.modalState.itemCopy.name = newName;
         this.modalState.itemCopy.updatedAt = new Date().toISOString();
         if (this.currentTab === 'cars' || this.currentTab === 'houses') {
@@ -220,7 +239,6 @@ const PriceTracker = {
             this.modalState.itemCopy.cost = (!isNaN(cost) && cost >= 0) ? cost : undefined;
         }
 
-        // Находим индекс ОРИГИНАЛА и заменяем его обновленной КОПИЕЙ
         const itemIndex = this.data[this.currentTab].findIndex(i => i.id === this.modalState.itemId);
         if (itemIndex !== -1) this.data[this.currentTab][itemIndex] = this.modalState.itemCopy;
 
@@ -238,7 +256,7 @@ const PriceTracker = {
     },
 
     closeModal() {
-        this.modalState = { isOpen: false, itemId: null, itemCopy: null }; // Сброс состояния
+        this.modalState = { isOpen: false, itemId: null, itemCopy: null };
         document.getElementById('edit-modal').style.display = 'none';
         document.body.style.overflow = 'auto';
     },
@@ -271,15 +289,63 @@ const PriceTracker = {
         } catch (e) { console.error("Ошибка загрузки данных:", e); }
     },
 
+    validateImportedData(data) {
+        if (typeof data !== 'object' || data === null) return false;
+        const requiredKeys = ['skins', 'accessories', 'items', 'cars', 'houses'];
+        for (const key of requiredKeys) {
+            if (!Array.isArray(data[key])) return false;
+        }
+        return true;
+    },
+
+    importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (!confirm('Вы уверены, что хотите импортировать данные? Все текущие данные будут полностью заменены.')) {
+            event.target.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const importedData = JSON.parse(e.target.result);
+                if (!this.validateImportedData(importedData)) {
+                    throw new Error('Структура данных в файле некорректна.');
+                }
+                this.data = importedData;
+                this.saveToStorage();
+                this.switchTab(this.currentTab); // Принудительное обновление UI
+                alert('Данные успешно импортированы!');
+            } catch (error) {
+                alert(`Ошибка импорта: ${error.message}`);
+            } finally {
+                event.target.value = '';
+            }
+        };
+        reader.onerror = () => {
+            alert('Произошла ошибка при чтении файла.');
+            event.target.value = '';
+        };
+        reader.readAsText(file);
+    },
+
     exportData() {
-        const dataStr = JSON.stringify(this.data, null, 2);
-        const blob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `price-tracker-export-${new Date().toISOString().slice(0, 10)}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
+        try {
+            const dataStr = JSON.stringify(this.data, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `price-tracker-export-${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            alert(`Ошибка экспорта: ${error.message}`);
+        }
     }
 };
 
