@@ -45,9 +45,11 @@
                 </select>
             </div>
             
-            <button id="export-btn" class="btn btn-secondary">
-                Экспорт данных
-            </button>
+            <div class="data-actions">
+                <button id="import-btn" class="btn btn-secondary">Импорт</button>
+                <button id="export-btn" class="btn btn-secondary">Экспорт</button>
+                <input type="file" id="import-file-input" accept=".json" style="display: none;">
+            </div>
         </div>
 
         <!-- Форма добавления товара -->
