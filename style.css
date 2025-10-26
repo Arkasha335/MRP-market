@@ -250,14 +250,18 @@ body {
     margin-bottom: var(--spacing-md);
 }
 
-/* НОВОЕ: стиль для предупреждений */
+.form-group:last-child {
+    margin-bottom: 0;
+}
+
 .warning {
     color: var(--danger);
     font-size: 0.875rem;
     font-weight: 500;
 }
 
-.form-group input {
+.form-group input[type="text"],
+.form-group input[type="number"] {
     width: 100%;
     padding: var(--spacing-sm) var(--spacing-md);
     background: var(--bg-tertiary);
@@ -324,12 +328,13 @@ body {
     justify-content: space-between;
     align-items: start;
     margin-bottom: var(--spacing-md);
+    gap: var(--spacing-md);
 }
 
 .item-title {
     font-size: 1.25rem;
     font-weight: 600;
-    margin-bottom: var(--spacing-xs);
+    word-break: break-word;
 }
 
 .item-meta {
@@ -337,13 +342,8 @@ body {
     gap: var(--spacing-sm);
     margin-bottom: var(--spacing-md);
     flex-wrap: wrap;
-}
-
-.item-meta span {
-    background: var(--bg-tertiary);
-    padding: var(--spacing-xs) var(--spacing-sm);
-    border-radius: 20px;
-    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
 }
 
 .item-prices {
@@ -384,9 +384,6 @@ body {
 }
 
 .item-stats {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     padding-top: var(--spacing-md);
     border-top: 1px solid var(--bg-tertiary);
 }
@@ -408,6 +405,7 @@ body {
     display: flex;
     align-items: center;
     gap: var(--spacing-xs);
+    flex-shrink: 0;
 }
 
 .edit-btn:hover {
@@ -415,12 +413,10 @@ body {
 }
 
 .gov-cost {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-xs);
     margin-top: var(--spacing-xs);
     color: var(--warning);
     font-weight: 500;
+    font-size: 0.9rem;
 }
 
 /* Пустое состояние */
@@ -428,6 +424,8 @@ body {
     text-align: center;
     padding: var(--spacing-xl) var(--spacing-md);
     color: var(--text-secondary);
+    border: 2px dashed var(--bg-tertiary);
+    border-radius: var(--border-radius);
 }
 
 .empty-icon {
@@ -454,16 +452,19 @@ body {
     justify-content: center;
     align-items: center;
     animation: fadeIn 0.3s ease;
+    padding: var(--spacing-md);
 }
 
 .modal-content {
     background: var(--bg-secondary);
     border-radius: var(--border-radius);
-    width: 90%;
+    width: 100%;
     max-width: 500px;
     max-height: 90vh;
     overflow-y: auto;
     box-shadow: var(--shadow-md);
+    display: flex;
+    flex-direction: column;
 }
 
 .modal-header {
@@ -472,6 +473,7 @@ body {
     align-items: center;
     padding: var(--spacing-md);
     border-bottom: 1px solid var(--bg-tertiary);
+    flex-shrink: 0;
 }
 
 .modal-header h3 {
@@ -500,6 +502,7 @@ body {
 
 .modal-body {
     padding: var(--spacing-md);
+    overflow-y: auto;
 }
 
 .modal-body .form-group {
@@ -511,13 +514,20 @@ body {
     margin-bottom: var(--spacing-xs);
     color: var(--text-secondary);
     font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.price-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
 }
 
 .edit-price-item {
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
-    margin-bottom: var(--spacing-sm);
     padding: var(--spacing-sm);
     background: var(--bg-tertiary);
     border-radius: var(--border-radius);
@@ -532,11 +542,26 @@ body {
     color: var(--text-primary);
 }
 
+.remove-edit-price {
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    font-size: 1.2rem;
+    background: var(--danger);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
 .modal-footer {
     display: flex;
     gap: var(--spacing-sm);
     padding: var(--spacing-md);
     border-top: 1px solid var(--bg-tertiary);
+    flex-shrink: 0;
 }
 
 /* Адаптивность */
@@ -546,46 +571,23 @@ body {
         align-items: stretch;
     }
     
-    .sort-controls {
-        width: 100%;
-    }
-    
     .item-header {
         flex-direction: column;
         align-items: stretch;
         gap: var(--spacing-sm);
     }
     
-    .item-stats {
-        flex-direction: column;
-        align-items: stretch;
-        gap: var(--spacing-md);
-    }
-    
-    .avg-price {
-        text-align: center;
-    }
-    
-    .edit-btn {
-        align-self: center;
-        width: fit-content;
-    }
-    
     .tabs {
         justify-content: flex-start;
+        overflow-x: auto;
+        padding-bottom: 8px;
     }
-}
-
-/* === КРИТИЧЕСКИ ВАЖНОЕ ИСПРАВЛЕНИЕ === */
-/* Гарантируем, что скрытые поля не отображаются */
-[style*="display: none"] {
-    display: none !important;
 }
 
 /* Анимации */
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
 }
 
 /* Скроллбар */
@@ -604,4 +606,4 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
     background: var(--bg-secondary);
-    }
+}
