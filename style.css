@@ -192,6 +192,11 @@ body {
     background-size: 16px 12px;
 }
 
+.data-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
 .btn {
     padding: var(--spacing-sm) var(--spacing-md);
     border-radius: var(--border-radius);
@@ -618,4 +623,4 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
     background: var(--bg-secondary);
-    }
+}
